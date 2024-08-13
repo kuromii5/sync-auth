@@ -1,0 +1,134 @@
+package transport
+
+import (
+	"context"
+	"errors"
+
+	auth "github.com/kuromii5/sync-auth/api/sync-auth/v1"
+	"github.com/kuromii5/sync-auth/internal/models"
+	"github.com/kuromii5/sync-auth/internal/repo/redis"
+	"github.com/kuromii5/sync-auth/internal/service"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/reflection"
+	"google.golang.org/grpc/status"
+)
+
+type api struct {
+	auth.UnimplementedAuthServer
+	auth *service.Auth
+}
+
+type Auth interface {
+	SignUp(ctx context.Context, email, password string) (int32, error)
+	Login(ctx context.Context, email, password, fingerprint string) (models.TokenPair, error)
+	GetAccessToken(ctx context.Context, refreshToken, fingerprint string) (string, error)
+	ValidateAccessToken(ctx context.Context, token string) (int32, error)
+	Logout(ctx context.Context, accessToken, fingerprint string) error
+}
+
+func NewGrpcServer(authApi *service.Auth) *grpc.Server {
+	api := &api{auth: authApi}
+
+	grpc := grpc.NewServer(grpc.Creds(insecure.NewCredentials()))
+	reflection.Register(grpc)
+	auth.RegisterAuthServer(grpc, api)
+
+	return grpc
+}
+
+func (a *api) SignUp(ctx context.Context, req *auth.SignUpRequest) (*auth.AuthResponse, error) {
+	err := validateSignUpRequest(req)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	_, err = a.auth.SignUp(ctx, req.GetEmail(), req.GetPassword())
+	if err != nil {
+		if errors.Is(err, service.ErrUserExists) {
+			return nil, status.Error(codes.AlreadyExists, "user already exists")
+		}
+
+		return nil, status.Error(codes.Internal, "internal register error")
+	}
+
+	// automatically log in after register
+	tokens, err := a.auth.Login(ctx, req.GetEmail(), req.GetPassword(), req.GetFingerprint())
+	if err != nil {
+		return nil, status.Error(codes.Internal, "internal login error")
+	}
+
+	return &auth.AuthResponse{
+		AccessToken:  tokens.AccessToken,
+		RefreshToken: tokens.RefreshToken,
+	}, nil
+}
+
+func (a *api) Login(ctx context.Context, req *auth.LoginRequest) (*auth.AuthResponse, error) {
+	err := validateLoginRequest(req)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	// get the pair of tokens: access and refresh
+	tokens, err := a.auth.Login(ctx, req.GetEmail(), req.GetPassword(), req.GetFingerprint())
+	if err != nil {
+		if errors.Is(err, service.ErrInvalidCreds) {
+			return nil, status.Error(codes.InvalidArgument, "invalid credentials")
+		}
+
+		return nil, status.Error(codes.Internal, "internal login error")
+	}
+
+	return &auth.AuthResponse{
+		AccessToken:  tokens.AccessToken,
+		RefreshToken: tokens.RefreshToken,
+	}, nil
+}
+
+func (a *api) OAuthLogin(ctx context.Context, req *auth.OAuthLoginRequest) (*auth.AuthResponse, error) {
+	tokens, err := a.auth.OAuthLogin(ctx, req.GetProvider(), req.GetOauthToken(), req.GetFingerprint())
+	if err != nil {
+		return nil, status.Error(codes.Internal, "internal oauth login error")
+	}
+
+	return &auth.AuthResponse{
+		AccessToken:  tokens.AccessToken,
+		RefreshToken: tokens.RefreshToken,
+	}, nil
+}
+
+func (a *api) GetAccessToken(ctx context.Context, req *auth.GetATRequest) (*auth.GetATResponse, error) {
+	accessToken, err := a.auth.GetAccessToken(ctx, req.GetRefreshToken(), req.GetFingerprint())
+	if err != nil {
+		if errors.Is(err, redis.ErrTokenNotFound) {
+			return nil, status.Error(codes.NotFound, "the refresh token does not exist")
+		}
+
+		return nil, status.Error(codes.Internal, "failed to generate access token")
+	}
+
+	return &auth.GetATResponse{
+		AccessToken: accessToken,
+	}, nil
+}
+
+func (a *api) ValidateAccessToken(ctx context.Context, req *auth.ValidateATRequest) (*auth.ValidateATResponse, error) {
+	userID, err := a.auth.ValidateAccessToken(ctx, req.GetAccessToken())
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, err.Error())
+	}
+
+	return &auth.ValidateATResponse{
+		UserId: userID,
+	}, nil
+}
+
+func (a *api) Logout(ctx context.Context, req *auth.LogoutRequest) (*auth.LogoutResponse, error) {
+	if err := a.auth.Logout(ctx, req.GetAccessToken(), req.GetFingerprint()); err != nil {
+		return nil, status.Error(codes.Internal, "failed to log out")
+	}
+
+	return &auth.LogoutResponse{}, nil
+}

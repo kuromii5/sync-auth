@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+package auth;
+
+import "google/api/annotations.proto";
+
+option go_package = "github.com/kuromii5/sync-auth;auth";
+
+service Auth {
+    rpc SignUp(SignUpRequest) returns (AuthResponse) {
+        option (google.api.http) = {
+            post: "/signup"
+            body: "*"
+        };
+    };
+    rpc Login(LoginRequest) returns (AuthResponse) {
+        option (google.api.http) = {
+            post: "/login"
+            body: "*"
+        };
+    };
+    rpc OAuthLogin(OAuthLoginRequest) returns (AuthResponse) {
+        option (google.api.http) = {
+            post: "/oauthlogin"
+            body: "*"
+        };
+    }
+    rpc Logout(LogoutRequest) returns (LogoutResponse) {
+        option (google.api.http) = {
+            post: "/logout"
+            body: "*"
+        };
+    };
+    rpc GetAccessToken(GetATRequest) returns (GetATResponse);
+    rpc ValidateAccessToken(ValidateATRequest) returns (ValidateATResponse);
+}
+
+message SignUpRequest {
+    string email = 1;
+    string password = 2;
+    string fingerprint = 3;
+}
+message LoginRequest {
+    string email = 1;
+    string password = 2;
+    string fingerprint = 3;
+}
+message OAuthLoginRequest {
+    string provider = 1;
+    string oauth_token = 2;
+    string fingerprint = 3;
+}
+message AuthResponse {
+    string accessToken = 1;
+    string refreshToken = 2;
+}
+
+// AC - Access Token
+message GetATRequest {
+    string refreshToken = 1;
+    string fingerprint = 2;
+}
+message GetATResponse {
+    string accessToken = 1;
+}
+message ValidateATRequest {
+    string accessToken = 1;
+}
+message ValidateATResponse {
+    int32 userId = 1;
+}
+
+message LogoutRequest {
+    string accessToken = 1;
+    string fingerprint = 2;
+}
+message LogoutResponse {}
