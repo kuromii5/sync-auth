@@ -157,19 +157,17 @@ func (a *Auth) ExchangeCodeForToken(ctx context.Context, code, provider string) 
 	}
 
 	user, err := a.userProvider.User(ctx, email)
-	if err != nil {
-		if errors.Is(err, postgres.ErrUserNotFound) {
-			// Then save new user
-			userID, err := a.userSaver.SaveUser(ctx, email, nil)
-			if err != nil {
-				log.Error("failed to save new user", le.Err(err))
+	switch {
+	case err == nil:
+	case errors.Is(err, postgres.ErrUserNotFound):
+		userID, saveErr := a.userSaver.SaveUser(ctx, email, nil)
+		if saveErr != nil {
+			log.Error("failed to save new user", le.Err(saveErr))
 
-				return models.TokenPair{}, fmt.Errorf("%s:%w", f, err)
-			}
-
-			user.ID = userID
+			return models.TokenPair{}, fmt.Errorf("%s:%w", f, saveErr)
 		}
-
+		user.ID = userID
+	default:
 		log.Error("failed to get user", le.Err(err))
 
 		return models.TokenPair{}, fmt.Errorf("%s:%w", f, err)
@@ -178,16 +176,18 @@ func (a *Auth) ExchangeCodeForToken(ctx context.Context, code, provider string) 
 	accessToken, err := a.tokenManager.NewAccessToken(ctx, user.ID)
 	if err != nil {
 		log.Error("failed to generate access token", le.Err(err))
+
 		return models.TokenPair{}, fmt.Errorf("%s:%w", f, err)
 	}
 
 	refreshToken, err := a.tokenManager.NewRefreshToken(ctx, user.ID, "")
 	if err != nil {
 		log.Error("failed to generate refresh token", le.Err(err))
+
 		return models.TokenPair{}, fmt.Errorf("%s:%w", f, err)
 	}
 
-	log.Info("user logged in successfully")
+	log.Info("user logged in via external service successfully")
 
 	return models.TokenPair{
 		AccessToken:  accessToken,

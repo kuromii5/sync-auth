@@ -14,10 +14,10 @@ type Config struct {
 	GrpcPort    int    `yaml:"grpc_port" env:"GRPC_PORT"`
 	GatewayPort int    `yaml:"gateway_port" env:"GATEWAY_PORT"`
 
-	PGConfig     PostgresConfig
-	TokensConfig TokensConfig
+	PGConfig     PostgresConfig `yaml:"postgres"`
+	TokensConfig TokensConfig   `yaml:"tokens"`
 
-	OauthGithub GithubAuth
+	OauthGithub GithubAuth `yaml:"github_auth"`
 }
 
 type TokensConfig struct {
