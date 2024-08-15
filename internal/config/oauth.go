@@ -6,32 +6,27 @@ import (
 )
 
 type ClientInfoManager interface {
+	GetClientID() string
+	GetClientSecret() string
 	Client() string
-	ClientID() string
-	ClientSecret() string
-	RedirectURL() string
 	Endpoint() oauth2.Endpoint
 }
 
 type GithubAuth struct {
-	clientID     string `yaml:"github_client_id" env:"GITHUB_CLIENT_ID"`
-	clientSecret string `yaml:"github_client_secret" env:"GITHUB_CLIENT_SECRET"`
+	ClientID     string `yaml:"github_client_id" env:"GITHUB_CLIENT_ID"`
+	ClientSecret string `yaml:"github_client_secret" env:"GITHUB_CLIENT_SECRET"`
 }
 
 func (g *GithubAuth) Client() string {
 	return "github"
 }
 
-func (g *GithubAuth) ClientID() string {
-	return g.clientID
+func (g *GithubAuth) GetClientID() string {
+	return g.ClientID
 }
 
-func (g *GithubAuth) ClientSecret() string {
-	return g.clientSecret
-}
-
-func (g *GithubAuth) RedirectURL() string {
-	return "http://localhost:8080/github/callback"
+func (g *GithubAuth) GetClientSecret() string {
+	return g.ClientSecret
 }
 
 func (g *GithubAuth) Endpoint() oauth2.Endpoint {

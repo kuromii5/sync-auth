@@ -8,6 +8,7 @@ import (
 
 	"github.com/kuromii5/sync-auth/internal/models"
 	"github.com/kuromii5/sync-auth/internal/repo/postgres"
+	"github.com/kuromii5/sync-auth/internal/service/external"
 	"github.com/kuromii5/sync-auth/internal/service/tokens"
 	"github.com/kuromii5/sync-auth/pkg/hasher"
 	le "github.com/kuromii5/sync-auth/pkg/logger/l_err"
@@ -15,9 +16,10 @@ import (
 )
 
 var (
-	ErrInvalidCreds = errors.New("invalid credentials")
-	ErrUserExists   = errors.New("user already exists")
-	ErrUserNotFound = errors.New("user not found")
+	ErrInvalidCreds       = errors.New("invalid credentials")
+	ErrUserExists         = errors.New("user already exists")
+	ErrUserNotFound       = errors.New("user not found")
+	ErrInvalidOAuthClient = errors.New("oauth client not found")
 )
 
 type Auth struct {
@@ -127,67 +129,65 @@ func (a *Auth) Login(ctx context.Context, email, password, fingerprint string) (
 	}, nil
 }
 
-func (a *Auth) OAuthLogin(ctx context.Context, provider, oauthToken, fingerprint string) (models.TokenPair, error) {
-	const f = "auth.OAuthLogin"
+func (a *Auth) ExchangeCodeForToken(ctx context.Context, code, provider string) (models.TokenPair, error) {
+	const f = "auth.ExchangeCodeForToken"
 
 	log := a.log.With(slog.String("func", f))
-	log.Info("trying to log in user via OAuth", slog.String("provider", provider))
+	log.Info("exchanging code for tokens")
 
-	clientConfig, ok := a.oAuthClients[provider]
-	if !ok {
-		log.Warn("unknown OAuth provider", slog.String("provider", provider))
-		return models.TokenPair{}, fmt.Errorf("unknown OAuth provider: %s", provider)
+	oauthConfig, exists := a.oAuthClients[provider]
+	if !exists {
+		log.Error("OAuth client not found", slog.String("provider", provider))
+
+		return models.TokenPair{}, fmt.Errorf("%s:%w", f, ErrInvalidOAuthClient)
 	}
 
-	// Exchange the OAuth token for user info
-	oAuthToken, err := clientConfig.Exchange(ctx, oauthToken)
+	tokens, err := oauthConfig.Exchange(ctx, code)
 	if err != nil {
-		log.Error("failed to exchange OAuth token", le.Err(err))
-		return models.TokenPair{}, fmt.Errorf("failed to exchange OAuth token: %w", err)
+		log.Error("failed to exchange code for token", le.Err(err))
+
+		return models.TokenPair{}, fmt.Errorf("%s:%s", f, err)
 	}
 
-	// Fetch user information from the provider
-	client := clientConfig.Client(ctx, oAuthToken)
-	userEmail, err := fetchOAuthEmail(client, provider)
+	email, err := external.GetGithubEmail(ctx, tokens.AccessToken)
 	if err != nil {
-		log.Error("failed to fetch user info", le.Err(err))
-		return models.TokenPair{}, fmt.Errorf("failed to fetch user info: %w", err)
+		log.Error("failed to get email from token", le.Err(err))
+
+		return models.TokenPair{}, fmt.Errorf("%s:%w", f, err)
 	}
 
-	// Check if the user already exists, otherwise create a new one
-	userFromDB, err := a.userProvider.User(ctx, userEmail)
+	user, err := a.userProvider.User(ctx, email)
 	if err != nil {
 		if errors.Is(err, postgres.ErrUserNotFound) {
-			log.Warn("user not found, creating new OAuth user", slog.String("email", userEmail))
-
-			userID, err := a.userSaver.SaveUser(ctx, userEmail, []byte{0})
+			// Then save new user
+			userID, err := a.userSaver.SaveUser(ctx, email, nil)
 			if err != nil {
-				log.Error("failed to save new OAuth user", le.Err(err))
-				return models.TokenPair{}, fmt.Errorf("failed to save new OAuth user: %w", err)
+				log.Error("failed to save new user", le.Err(err))
+
+				return models.TokenPair{}, fmt.Errorf("%s:%w", f, err)
 			}
 
-			userFromDB.ID = userID
-		} else {
-			log.Error("error retrieving user from DB", le.Err(err))
-			return models.TokenPair{}, fmt.Errorf("error retrieving user from DB: %w", err)
+			user.ID = userID
 		}
-	} else {
-		log.Info("user found in database", slog.String("email", userEmail), slog.Int("userID", int(userFromDB.ID)))
+
+		log.Error("failed to get user", le.Err(err))
+
+		return models.TokenPair{}, fmt.Errorf("%s:%w", f, err)
 	}
 
-	accessToken, err := a.tokenManager.NewAccessToken(ctx, userFromDB.ID)
+	accessToken, err := a.tokenManager.NewAccessToken(ctx, user.ID)
 	if err != nil {
-		log.Error("failed to generate JWT access token", le.Err(err))
-		return models.TokenPair{}, fmt.Errorf("failed to generate JWT access token: %w", err)
+		log.Error("failed to generate access token", le.Err(err))
+		return models.TokenPair{}, fmt.Errorf("%s:%w", f, err)
 	}
 
-	refreshToken, err := a.tokenManager.NewRefreshToken(ctx, userFromDB.ID, fingerprint)
+	refreshToken, err := a.tokenManager.NewRefreshToken(ctx, user.ID, "")
 	if err != nil {
 		log.Error("failed to generate refresh token", le.Err(err))
-		return models.TokenPair{}, fmt.Errorf("failed to generate refresh token: %w", err)
+		return models.TokenPair{}, fmt.Errorf("%s:%w", f, err)
 	}
 
-	log.Info("user logged in successfully via OAuth", slog.String("email", userEmail), slog.Int("userID", int(userFromDB.ID)))
+	log.Info("user logged in successfully")
 
 	return models.TokenPair{
 		AccessToken:  accessToken,

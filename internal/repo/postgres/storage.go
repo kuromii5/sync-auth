@@ -2,12 +2,12 @@ package postgres
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"log"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kuromii5/sync-auth/internal/config"
@@ -82,7 +82,7 @@ func (d *DB) User(ctx context.Context, email string) (models.User, error) {
 	err := d.Pool.QueryRow(ctx, query, email).
 		Scan(&user.ID, &user.Email, &user.PasswordHash, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return models.User{}, fmt.Errorf("%s:%w", f, ErrUserNotFound)
 		}
 

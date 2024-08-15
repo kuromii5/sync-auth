@@ -19,10 +19,10 @@ func LoadOauthClients(clients []config.ClientInfoManager) map[string]*oauth2.Con
 
 	for _, client := range clients {
 		clientConfig := &oauth2.Config{
-			ClientID:     client.ClientID(),
-			ClientSecret: client.ClientSecret(),
-			RedirectURL:  client.RedirectURL(),
+			ClientID:     client.GetClientID(),
+			ClientSecret: client.GetClientSecret(),
 			Endpoint:     client.Endpoint(),
+			RedirectURL:  "http://localhost:8080/oauth/callback",
 			Scopes:       []string{"user:email"},
 		}
 

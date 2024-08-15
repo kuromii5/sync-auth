@@ -19,15 +19,15 @@ service Auth {
             body: "*"
         };
     };
-    rpc OAuthLogin(OAuthLoginRequest) returns (AuthResponse) {
-        option (google.api.http) = {
-            post: "/oauthlogin"
-            body: "*"
-        };
-    }
     rpc Logout(LogoutRequest) returns (LogoutResponse) {
         option (google.api.http) = {
             post: "/logout"
+            body: "*"
+        };
+    };
+    rpc ExchangeCodeForToken(ExchangeCodeRequest) returns (AuthResponse) {
+        option (google.api.http) = {
+            post: "/oauth/callback"
             body: "*"
         };
     };
@@ -45,10 +45,9 @@ message LoginRequest {
     string password = 2;
     string fingerprint = 3;
 }
-message OAuthLoginRequest {
+message ExchangeCodeRequest {
     string provider = 1;
-    string oauth_token = 2;
-    string fingerprint = 3;
+    string code = 2;  // Authorization code from GitHub
 }
 message AuthResponse {
     string accessToken = 1;

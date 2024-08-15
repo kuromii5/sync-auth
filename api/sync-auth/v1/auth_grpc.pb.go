@@ -24,8 +24,8 @@ const _ = grpc.SupportPackageIsVersion7
 type AuthClient interface {
 	SignUp(ctx context.Context, in *SignUpRequest, opts ...grpc.CallOption) (*AuthResponse, error)
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*AuthResponse, error)
-	OAuthLogin(ctx context.Context, in *OAuthLoginRequest, opts ...grpc.CallOption) (*AuthResponse, error)
 	Logout(ctx context.Context, in *LogoutRequest, opts ...grpc.CallOption) (*LogoutResponse, error)
+	ExchangeCodeForToken(ctx context.Context, in *ExchangeCodeRequest, opts ...grpc.CallOption) (*AuthResponse, error)
 	GetAccessToken(ctx context.Context, in *GetATRequest, opts ...grpc.CallOption) (*GetATResponse, error)
 	ValidateAccessToken(ctx context.Context, in *ValidateATRequest, opts ...grpc.CallOption) (*ValidateATResponse, error)
 }
@@ -56,18 +56,18 @@ func (c *authClient) Login(ctx context.Context, in *LoginRequest, opts ...grpc.C
 	return out, nil
 }
 
-func (c *authClient) OAuthLogin(ctx context.Context, in *OAuthLoginRequest, opts ...grpc.CallOption) (*AuthResponse, error) {
-	out := new(AuthResponse)
-	err := c.cc.Invoke(ctx, "/auth.Auth/OAuthLogin", in, out, opts...)
+func (c *authClient) Logout(ctx context.Context, in *LogoutRequest, opts ...grpc.CallOption) (*LogoutResponse, error) {
+	out := new(LogoutResponse)
+	err := c.cc.Invoke(ctx, "/auth.Auth/Logout", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *authClient) Logout(ctx context.Context, in *LogoutRequest, opts ...grpc.CallOption) (*LogoutResponse, error) {
-	out := new(LogoutResponse)
-	err := c.cc.Invoke(ctx, "/auth.Auth/Logout", in, out, opts...)
+func (c *authClient) ExchangeCodeForToken(ctx context.Context, in *ExchangeCodeRequest, opts ...grpc.CallOption) (*AuthResponse, error) {
+	out := new(AuthResponse)
+	err := c.cc.Invoke(ctx, "/auth.Auth/ExchangeCodeForToken", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -98,8 +98,8 @@ func (c *authClient) ValidateAccessToken(ctx context.Context, in *ValidateATRequ
 type AuthServer interface {
 	SignUp(context.Context, *SignUpRequest) (*AuthResponse, error)
 	Login(context.Context, *LoginRequest) (*AuthResponse, error)
-	OAuthLogin(context.Context, *OAuthLoginRequest) (*AuthResponse, error)
 	Logout(context.Context, *LogoutRequest) (*LogoutResponse, error)
+	ExchangeCodeForToken(context.Context, *ExchangeCodeRequest) (*AuthResponse, error)
 	GetAccessToken(context.Context, *GetATRequest) (*GetATResponse, error)
 	ValidateAccessToken(context.Context, *ValidateATRequest) (*ValidateATResponse, error)
 	mustEmbedUnimplementedAuthServer()
@@ -115,11 +115,11 @@ func (UnimplementedAuthServer) SignUp(context.Context, *SignUpRequest) (*AuthRes
 func (UnimplementedAuthServer) Login(context.Context, *LoginRequest) (*AuthResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Login not implemented")
 }
-func (UnimplementedAuthServer) OAuthLogin(context.Context, *OAuthLoginRequest) (*AuthResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method OAuthLogin not implemented")
-}
 func (UnimplementedAuthServer) Logout(context.Context, *LogoutRequest) (*LogoutResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Logout not implemented")
+}
+func (UnimplementedAuthServer) ExchangeCodeForToken(context.Context, *ExchangeCodeRequest) (*AuthResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ExchangeCodeForToken not implemented")
 }
 func (UnimplementedAuthServer) GetAccessToken(context.Context, *GetATRequest) (*GetATResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetAccessToken not implemented")
@@ -176,24 +176,6 @@ func _Auth_Login_Handler(srv interface{}, ctx context.Context, dec func(interfac
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Auth_OAuthLogin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(OAuthLoginRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AuthServer).OAuthLogin(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/auth.Auth/OAuthLogin",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServer).OAuthLogin(ctx, req.(*OAuthLoginRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _Auth_Logout_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(LogoutRequest)
 	if err := dec(in); err != nil {
@@ -208,6 +190,24 @@ func _Auth_Logout_Handler(srv interface{}, ctx context.Context, dec func(interfa
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AuthServer).Logout(ctx, req.(*LogoutRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Auth_ExchangeCodeForToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExchangeCodeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServer).ExchangeCodeForToken(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/auth.Auth/ExchangeCodeForToken",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServer).ExchangeCodeForToken(ctx, req.(*ExchangeCodeRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -264,12 +264,12 @@ var Auth_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Auth_Login_Handler,
 		},
 		{
-			MethodName: "OAuthLogin",
-			Handler:    _Auth_OAuthLogin_Handler,
-		},
-		{
 			MethodName: "Logout",
 			Handler:    _Auth_Logout_Handler,
+		},
+		{
+			MethodName: "ExchangeCodeForToken",
+			Handler:    _Auth_ExchangeCodeForToken_Handler,
 		},
 		{
 			MethodName: "GetAccessToken",
