@@ -7,7 +7,6 @@ import (
 	"net/http"
 )
 
-// GetGithubEmail извлекает email пользователя из GitHub API
 func GetGithubEmail(ctx context.Context, accessToken string) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", "https://api.github.com/user/emails", nil)
 	if err != nil {

@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"context"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -17,8 +16,7 @@ import (
 )
 
 type AuthService struct {
-	server  *server.Server
-	gateway *server.Gateway
+	server *server.Server
 }
 
 func NewAuthService() *AuthService {
@@ -44,13 +42,6 @@ func NewAuthService() *AuthService {
 	// Init service
 	authService := service.NewAuthService(logger, db, db, tokenManager, oAuthClients)
 
-	// Init gateway
-	gateway := server.NewGateway(
-		config.GatewayPort,
-		config.GrpcPort,
-		logger,
-	)
-
 	// Init server
 	server := server.NewServer(
 		logger,
@@ -66,23 +57,14 @@ func NewAuthService() *AuthService {
 		),
 	)
 
-	return &AuthService{server: server, gateway: gateway}
+	return &AuthService{server: server}
 }
 
 func (a *AuthService) Run() {
-	ctx := context.Background()
-
-	// run grpc server
 	go func() {
 		a.server.Run()
 	}()
 
-	// run grpc gateway to receive http requests
-	go func() {
-		a.gateway.Run(ctx)
-	}()
-
-	// Handle graceful shutdown
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	<-c

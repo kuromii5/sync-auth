@@ -9,10 +9,9 @@ import (
 )
 
 type Config struct {
-	Env         string `yaml:"env" env:"ENV"`
-	LogLevel    string `yaml:"log_evel" env:"LOG_LEVEL"`
-	GrpcPort    int    `yaml:"grpc_port" env:"GRPC_PORT"`
-	GatewayPort int    `yaml:"gateway_port" env:"GATEWAY_PORT"`
+	Env      string `yaml:"env" env:"ENV"`
+	LogLevel string `yaml:"log_evel" env:"LOG_LEVEL"`
+	GrpcPort int    `yaml:"grpc_port" env:"GRPC_PORT"`
 
 	PGConfig     PostgresConfig `yaml:"postgres"`
 	TokensConfig TokensConfig   `yaml:"tokens"`
