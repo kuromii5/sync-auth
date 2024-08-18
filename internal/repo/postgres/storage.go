@@ -91,3 +91,22 @@ func (d *DB) User(ctx context.Context, email string) (models.User, error) {
 
 	return user, nil
 }
+
+func (d *DB) UserByID(ctx context.Context, userID int32) (models.User, error) {
+	const f = "postgres.UserByID"
+
+	query := "SELECT id, email, pass_hash, created_at, updated_at FROM users WHERE id = $1"
+
+	var user models.User
+	err := d.Pool.QueryRow(ctx, query, userID).
+		Scan(&user.ID, &user.Email, &user.PasswordHash, &user.CreatedAt, &user.UpdatedAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return models.User{}, fmt.Errorf("%s:%w", f, ErrUserNotFound)
+		}
+
+		return models.User{}, fmt.Errorf("%s:%w", f, err)
+	}
+
+	return user, nil
+}

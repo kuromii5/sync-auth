@@ -12,7 +12,9 @@ import (
 	"github.com/kuromii5/sync-auth/internal/repo/postgres"
 	"github.com/kuromii5/sync-auth/internal/repo/redis"
 	"github.com/kuromii5/sync-auth/internal/service"
+	"github.com/kuromii5/sync-auth/internal/service/oauth"
 	"github.com/kuromii5/sync-auth/internal/service/tokens"
+	"github.com/kuromii5/sync-auth/internal/service/verification"
 )
 
 type AuthService struct {
@@ -35,17 +37,21 @@ func NewAuthService() *AuthService {
 	// Init database
 	db := postgres.NewDB(config.PGConfig)
 
-	// Init token manager and token storage
-	tokenStorage := redis.NewTokenStorage(config.TokensConfig.RedisAddr)
-	tokenManager := tokens.NewTokenManager(logger, config.TokensConfig.Secret, config.TokensConfig.AccessTTL, config.TokensConfig.RefreshTTL, tokenStorage, tokenStorage, tokenStorage)
+	// Init Redis storage
+	storage := redis.NewTokenStorage(config.TokensConfig.RedisAddr)
+
+	// Init managers
+	tokenManager := tokens.NewTokenManager(logger, config.TokensConfig.Secret, config.TokensConfig.AccessTTL, config.TokensConfig.RefreshTTL, storage, storage, storage)
+	verificationManager := verification.NewVerificationManager(logger, config.EVConfig.CodeTTL, config.EVConfig.AppEmail, config.EVConfig.AppPassword)
+	oAuthManager := oauth.NewOAuthManager(logger, oAuthClients)
 
 	// Init service
-	authService := service.NewAuthService(logger, db, db, tokenManager, oAuthClients)
+	authService := service.NewAuthService(logger, verificationManager, db, db, tokenManager, tokenManager, storage, oAuthManager)
 
 	// Init server
 	server := server.NewServer(
 		logger,
-		config.GrpcPort,
+		config.Port,
 		authService,
 	)
 
@@ -53,7 +59,7 @@ func NewAuthService() *AuthService {
 		slog.Group("Settings",
 			slog.Any("Postgres", config.PGConfig),
 			slog.String("Environment", config.Env),
-			slog.Int("GRPC port", config.GrpcPort),
+			slog.Int("Port", config.Port),
 		),
 	)
 

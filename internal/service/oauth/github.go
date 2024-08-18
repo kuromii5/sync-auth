@@ -1,13 +1,34 @@
-package external
+package oauth
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
+
+	"golang.org/x/oauth2"
 )
 
-func GetGithubEmail(ctx context.Context, accessToken string) (string, error) {
+type OAuthManager struct {
+	log          *slog.Logger
+	OAuthClients map[string]*oauth2.Config
+}
+
+func NewOAuthManager(log *slog.Logger, oauthClients map[string]*oauth2.Config) *OAuthManager {
+	return &OAuthManager{log: log, OAuthClients: oauthClients}
+}
+
+func (m *OAuthManager) ConfigByProvider(provider string) *oauth2.Config {
+	config, ok := m.OAuthClients[provider]
+	if !ok {
+		return nil
+	}
+
+	return config
+}
+
+func (m *OAuthManager) GetGithubEmail(ctx context.Context, accessToken string) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", "https://api.github.com/user/emails", nil)
 	if err != nil {
 		return "", fmt.Errorf("failed to create request: %w", err)

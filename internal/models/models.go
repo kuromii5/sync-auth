@@ -14,3 +14,13 @@ type TokenPair struct {
 	AccessToken  string
 	RefreshToken string
 }
+
+type VerifyEmailResp struct {
+	Status  string
+	CodeTTL time.Duration
+}
+
+type ConfirmCodeResp struct {
+	Success bool
+	Message string
+}

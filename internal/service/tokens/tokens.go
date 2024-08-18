@@ -26,10 +26,10 @@ type TokenManager struct {
 }
 
 type RefreshTokenSetter interface {
-	Set(ctx context.Context, userID int32, fingerprint, token string, expires time.Duration) error
+	SetRefreshToken(ctx context.Context, userID int32, fingerprint, token string, expires time.Duration) error
 }
 type RefreshTokenDeleter interface {
-	Delete(ctx context.Context, userID int32, fingerprint string) error
+	DeleteRefreshToken(ctx context.Context, userID int32, fingerprint string) error
 }
 type UserGetter interface {
 	UserID(ctx context.Context, token, fingerprint string) (string, error)
@@ -91,7 +91,7 @@ func (t *TokenManager) NewRefreshToken(ctx context.Context, userID int32, finger
 	refreshToken := base64.URLEncoding.EncodeToString(b)
 
 	// save token
-	err = t.refreshTokenSetter.Set(ctx, userID, fingerprint, refreshToken, t.refreshTTL)
+	err = t.refreshTokenSetter.SetRefreshToken(ctx, userID, fingerprint, refreshToken, t.refreshTTL)
 	if err != nil {
 		log.Error("failed to save refresh token", le.Err(err))
 
@@ -178,5 +178,5 @@ func (t *TokenManager) Delete(ctx context.Context, userID int32, fingerprint str
 	log := t.log.With(slog.String("func", f))
 	log.Info("Deleting refresh tokens for user", slog.Int("user_id", int(userID)))
 
-	return t.refreshTokenDeleter.Delete(ctx, userID, fingerprint)
+	return t.refreshTokenDeleter.DeleteRefreshToken(ctx, userID, fingerprint)
 }

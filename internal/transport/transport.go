@@ -23,10 +23,15 @@ type api struct {
 type Auth interface {
 	SignUp(ctx context.Context, email, password string) (int32, error)
 	Login(ctx context.Context, email, password, fingerprint string) (models.TokenPair, error)
+	Logout(ctx context.Context, accessToken, fingerprint string) error
+
 	ExchangeCodeForToken(ctx context.Context, code, provider string) (models.TokenPair, error)
+
+	VerifyEmail(ctx context.Context, accessToken string) (models.VerifyEmailResp, error)
+	ConfirmCode(ctx context.Context, code int32, accessToken string) (models.ConfirmCodeResp, error)
+
 	GetAccessToken(ctx context.Context, refreshToken, fingerprint string) (string, error)
 	ValidateAccessToken(ctx context.Context, token string) (int32, error)
-	Logout(ctx context.Context, accessToken, fingerprint string) error
 }
 
 func NewGrpcServer(authApi *service.Auth) *grpc.Server {
@@ -88,8 +93,40 @@ func (a *api) Login(ctx context.Context, req *auth.LoginRequest) (*auth.AuthResp
 	}, nil
 }
 
+func (a *api) Logout(ctx context.Context, req *auth.LogoutRequest) (*auth.LogoutResponse, error) {
+	if err := a.auth.Logout(ctx, req.GetAccessToken(), req.GetFingerprint()); err != nil {
+		return nil, status.Error(codes.Internal, "failed to log out")
+	}
+
+	return &auth.LogoutResponse{}, nil
+}
+
+func (a *api) VerifyEmail(ctx context.Context, req *auth.VerifyEmailRequest) (*auth.VerifyEmailResponse, error) {
+	response, err := a.auth.VerifyEmail(ctx, req.GetAccessToken())
+	if err != nil {
+		return nil, status.Error(codes.Internal, "internal server error")
+	}
+
+	return &auth.VerifyEmailResponse{
+		Status:  response.Status,
+		CodeTTL: int32(response.CodeTTL.Seconds()),
+	}, nil
+}
+
+func (a *api) ConfirmCode(ctx context.Context, req *auth.ConfirmCodeRequest) (*auth.ConfirmCodeResponse, error) {
+	response, err := a.auth.ConfirmCode(ctx, req.GetCode(), req.GetAccessToken())
+	if err != nil {
+		return nil, status.Error(codes.Internal, "internal server error")
+	}
+
+	return &auth.ConfirmCodeResponse{
+		Success: response.Success,
+		Message: response.Message,
+	}, nil
+}
+
 func (a *api) ExchangeCodeForToken(ctx context.Context, req *auth.ExchangeCodeRequest) (*auth.AuthResponse, error) {
-	tokens, err := a.auth.ExchangeCodeForToken(ctx, req.GetCode(), req.GetProvider())
+	tokens, err := a.auth.ExchangeCodeForToken(ctx, req.GetCode(), req.GetProvider(), req.GetFingerprint())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -124,12 +161,4 @@ func (a *api) ValidateAccessToken(ctx context.Context, req *auth.ValidateATReque
 	return &auth.ValidateATResponse{
 		UserId: userID,
 	}, nil
-}
-
-func (a *api) Logout(ctx context.Context, req *auth.LogoutRequest) (*auth.LogoutResponse, error) {
-	if err := a.auth.Logout(ctx, req.GetAccessToken(), req.GetFingerprint()); err != nil {
-		return nil, status.Error(codes.Internal, "failed to log out")
-	}
-
-	return &auth.LogoutResponse{}, nil
 }

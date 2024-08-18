@@ -13,8 +13,8 @@ type ClientInfoManager interface {
 }
 
 type GithubAuth struct {
-	ClientID     string `yaml:"github_client_id" env:"GITHUB_CLIENT_ID"`
-	ClientSecret string `yaml:"github_client_secret" env:"GITHUB_CLIENT_SECRET"`
+	ClientID     string `yaml:"github_client_id" env:"GITHUB_CLIENT_ID" env-required:"true"`
+	ClientSecret string `yaml:"github_client_secret" env:"GITHUB_CLIENT_SECRET" env-required:"true"`
 }
 
 func (g *GithubAuth) Client() string {

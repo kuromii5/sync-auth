@@ -31,6 +31,18 @@ service Auth {
             body: "*"
         };
     };
+    rpc VerifyEmail(VerifyEmailRequest) returns (VerifyEmailResponse) {
+        option (google.api.http) = {
+            post: "/email-verify"
+            body: "*"
+        };
+    };
+    rpc ConfirmCode(ConfirmCodeRequest) returns (ConfirmCodeResponse) {
+        option (google.api.http) = {
+            post: "/confirm"
+            body: "*"
+        };
+    };
     rpc GetAccessToken(GetATRequest) returns (GetATResponse);
     rpc ValidateAccessToken(ValidateATRequest) returns (ValidateATResponse);
 }
@@ -48,10 +60,33 @@ message LoginRequest {
 message ExchangeCodeRequest {
     string provider = 1;
     string code = 2;  // Authorization code from GitHub
+    string fingerprint = 3;
 }
 message AuthResponse {
     string accessToken = 1;
     string refreshToken = 2;
+}
+
+message LogoutRequest {
+    string accessToken = 1;
+    string fingerprint = 2;
+}
+message LogoutResponse {}
+
+message VerifyEmailRequest {
+    string accessToken = 1;
+}
+message VerifyEmailResponse {
+    string status = 1;
+    int32 codeTTL = 2;
+}
+message ConfirmCodeRequest {
+    string accessToken = 1;
+    int32 code = 2;
+}
+message ConfirmCodeResponse {
+    bool success = 1;
+    string message = 2;
 }
 
 // AC - Access Token
@@ -68,9 +103,3 @@ message ValidateATRequest {
 message ValidateATResponse {
     int32 userId = 1;
 }
-
-message LogoutRequest {
-    string accessToken = 1;
-    string fingerprint = 2;
-}
-message LogoutResponse {}

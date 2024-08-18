@@ -26,6 +26,8 @@ type AuthClient interface {
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*AuthResponse, error)
 	Logout(ctx context.Context, in *LogoutRequest, opts ...grpc.CallOption) (*LogoutResponse, error)
 	ExchangeCodeForToken(ctx context.Context, in *ExchangeCodeRequest, opts ...grpc.CallOption) (*AuthResponse, error)
+	VerifyEmail(ctx context.Context, in *VerifyEmailRequest, opts ...grpc.CallOption) (*VerifyEmailResponse, error)
+	ConfirmCode(ctx context.Context, in *ConfirmCodeRequest, opts ...grpc.CallOption) (*ConfirmCodeResponse, error)
 	GetAccessToken(ctx context.Context, in *GetATRequest, opts ...grpc.CallOption) (*GetATResponse, error)
 	ValidateAccessToken(ctx context.Context, in *ValidateATRequest, opts ...grpc.CallOption) (*ValidateATResponse, error)
 }
@@ -74,6 +76,24 @@ func (c *authClient) ExchangeCodeForToken(ctx context.Context, in *ExchangeCodeR
 	return out, nil
 }
 
+func (c *authClient) VerifyEmail(ctx context.Context, in *VerifyEmailRequest, opts ...grpc.CallOption) (*VerifyEmailResponse, error) {
+	out := new(VerifyEmailResponse)
+	err := c.cc.Invoke(ctx, "/auth.Auth/VerifyEmail", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authClient) ConfirmCode(ctx context.Context, in *ConfirmCodeRequest, opts ...grpc.CallOption) (*ConfirmCodeResponse, error) {
+	out := new(ConfirmCodeResponse)
+	err := c.cc.Invoke(ctx, "/auth.Auth/ConfirmCode", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *authClient) GetAccessToken(ctx context.Context, in *GetATRequest, opts ...grpc.CallOption) (*GetATResponse, error) {
 	out := new(GetATResponse)
 	err := c.cc.Invoke(ctx, "/auth.Auth/GetAccessToken", in, out, opts...)
@@ -100,6 +120,8 @@ type AuthServer interface {
 	Login(context.Context, *LoginRequest) (*AuthResponse, error)
 	Logout(context.Context, *LogoutRequest) (*LogoutResponse, error)
 	ExchangeCodeForToken(context.Context, *ExchangeCodeRequest) (*AuthResponse, error)
+	VerifyEmail(context.Context, *VerifyEmailRequest) (*VerifyEmailResponse, error)
+	ConfirmCode(context.Context, *ConfirmCodeRequest) (*ConfirmCodeResponse, error)
 	GetAccessToken(context.Context, *GetATRequest) (*GetATResponse, error)
 	ValidateAccessToken(context.Context, *ValidateATRequest) (*ValidateATResponse, error)
 	mustEmbedUnimplementedAuthServer()
@@ -120,6 +142,12 @@ func (UnimplementedAuthServer) Logout(context.Context, *LogoutRequest) (*LogoutR
 }
 func (UnimplementedAuthServer) ExchangeCodeForToken(context.Context, *ExchangeCodeRequest) (*AuthResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ExchangeCodeForToken not implemented")
+}
+func (UnimplementedAuthServer) VerifyEmail(context.Context, *VerifyEmailRequest) (*VerifyEmailResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method VerifyEmail not implemented")
+}
+func (UnimplementedAuthServer) ConfirmCode(context.Context, *ConfirmCodeRequest) (*ConfirmCodeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ConfirmCode not implemented")
 }
 func (UnimplementedAuthServer) GetAccessToken(context.Context, *GetATRequest) (*GetATResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetAccessToken not implemented")
@@ -212,6 +240,42 @@ func _Auth_ExchangeCodeForToken_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Auth_VerifyEmail_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VerifyEmailRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServer).VerifyEmail(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/auth.Auth/VerifyEmail",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServer).VerifyEmail(ctx, req.(*VerifyEmailRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Auth_ConfirmCode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ConfirmCodeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServer).ConfirmCode(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/auth.Auth/ConfirmCode",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServer).ConfirmCode(ctx, req.(*ConfirmCodeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Auth_GetAccessToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetATRequest)
 	if err := dec(in); err != nil {
@@ -270,6 +334,14 @@ var Auth_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ExchangeCodeForToken",
 			Handler:    _Auth_ExchangeCodeForToken_Handler,
+		},
+		{
+			MethodName: "VerifyEmail",
+			Handler:    _Auth_VerifyEmail_Handler,
+		},
+		{
+			MethodName: "ConfirmCode",
+			Handler:    _Auth_ConfirmCode_Handler,
 		},
 		{
 			MethodName: "GetAccessToken",
