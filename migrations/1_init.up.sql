@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(255) NOT NULL UNIQUE,
     pass_hash BYTEA,
     created_at TIMESTAMP DEFAULT NOW() NOT NULL,
-    updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+    updated_at TIMESTAMP DEFAULT NOW() NOT NULL,
+    email_verified BOOLEAN DEFAULT FALSE
 );
 CREATE INDEX IF NOT EXISTS index_email ON users (email);

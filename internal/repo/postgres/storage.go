@@ -110,3 +110,16 @@ func (d *DB) UserByID(ctx context.Context, userID int32) (models.User, error) {
 
 	return user, nil
 }
+
+func (d *DB) VerifyUser(ctx context.Context, userID int32) error {
+	const f = "postgres.VerifyUser"
+
+	query := "UPDATE users SET email_verified = TRUE, updated_at = NOW() WHERE id = $1"
+
+	_, err := d.Pool.Exec(ctx, query, userID)
+	if err != nil {
+		return fmt.Errorf("%s:%w", f, err)
+	}
+
+	return nil
+}

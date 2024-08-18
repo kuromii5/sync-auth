@@ -37,6 +37,7 @@ type Auth struct {
 
 type UserSaver interface {
 	SaveUser(ctx context.Context, email string, hash []byte) (int32, error)
+	VerifyUser(ctx context.Context, userID int32) error
 }
 type UserProvider interface {
 	User(ctx context.Context, email string) (models.User, error)
@@ -270,6 +271,12 @@ func (a *Auth) ConfirmCode(ctx context.Context, code int32, accessToken string) 
 
 	if err := a.codeManager.DeleteCode(ctx, userID); err != nil {
 		log.Error("failed to delete code from storage", le.Err(err))
+
+		return models.ConfirmCodeResp{}, fmt.Errorf("%s:%w", f, err)
+	}
+
+	if err := a.userSaver.VerifyUser(ctx, userID); err != nil {
+		log.Error("failed to verify user in db", le.Err(err))
 
 		return models.ConfirmCodeResp{}, fmt.Errorf("%s:%w", f, err)
 	}
