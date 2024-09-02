@@ -12,12 +12,6 @@ go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway
 ```
 
-Generate the code by command in the Makefile:
-
-```bash
-make build
-```
-
 ## Configuration setup
 
 ### .env example
@@ -25,15 +19,9 @@ make build
 Make sure you have a .env file in the root directory with the following content:
 
 ```env
-# ENVIRONMENT
 ENV=local
-
-# LOG LEVEL
 LOG_LEVEL=info
-
-# SERVER
-GRPC_PORT=44044
-GATEWAY_PORT=8080
+PORT=44044
 
 # TOKEN MANAGEMENT SETTINGS
 TOKENS_ACCESS_TTL=15m
@@ -49,10 +37,19 @@ POSTGRES_PORT=5432
 POSTGRES_DBNAME=sync
 POSTGRES_SSLMODE=disable
 
+# EMAIL VERIFICATION
+EMAIL_CODE_TTL=240s
+APP_EMAIL=someone@gmail.com
+APP_PASSWORD=dkjfjkwdfjwj
+
 # OAUTH GITHUB
 GITHUB_CLIENT_ID=my_app_id
 GITHUB_CLIENT_SECRET=my_app_secret
 ```
+
+### Features
+
+This service supports Authorization through Github and email verification. So you need a github app and work google email address to use it.
 
 ### Migrations
 
