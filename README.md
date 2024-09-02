@@ -41,6 +41,7 @@ POSTGRES_SSLMODE=disable
 EMAIL_CODE_TTL=240s
 APP_EMAIL=someone@gmail.com
 APP_PASSWORD=dkjfjkwdfjwj
+APP_SMTP_HOST=smtp.gmail.com
 
 # OAUTH GITHUB
 GITHUB_CLIENT_ID=my_app_id
