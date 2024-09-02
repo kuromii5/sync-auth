@@ -40,6 +40,7 @@ type EmailVerificationConfig struct {
 	CodeTTL     time.Duration `yaml:"email_code_ttl" env:"EMAIL_CODE_TTL" env-default:"120s"`
 	AppEmail    string        `yaml:"app_email" env:"APP_EMAIL" env-required:"true"`
 	AppPassword string        `yaml:"app_password" env:"APP_PASSWORD" env-required:"true"`
+	AppSmtpHost string        `yaml:"app_smtp_host" env:"APP_SMTP_HOST" env-required:"true"`
 }
 
 func init() {

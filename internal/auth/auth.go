@@ -42,7 +42,7 @@ func NewAuthService() *AuthService {
 
 	// Init managers
 	tokenManager := tokens.NewTokenManager(logger, config.TokensConfig.Secret, config.TokensConfig.AccessTTL, config.TokensConfig.RefreshTTL, storage, storage, storage)
-	verificationManager := verification.NewVerificationManager(logger, config.EVConfig.CodeTTL, config.EVConfig.AppEmail, config.EVConfig.AppPassword)
+	verificationManager := verification.NewVerificationManager(logger, config.EVConfig.CodeTTL, config.EVConfig.AppEmail, config.EVConfig.AppPassword, config.EVConfig.AppSmtpHost)
 	oAuthManager := oauth.NewOAuthManager(logger, oAuthClients)
 
 	// Init service

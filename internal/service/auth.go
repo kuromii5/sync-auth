@@ -130,8 +130,8 @@ func (a *Auth) Login(ctx context.Context, email, password, fingerprint string) (
 
 			return models.TokenPair{}, fmt.Errorf("%s:%w", f, ErrInvalidCreds)
 		}
-
 		a.log.Error("failed to get user", le.Err(err))
+
 		return models.TokenPair{}, fmt.Errorf("%s:%w", f, err)
 	}
 
