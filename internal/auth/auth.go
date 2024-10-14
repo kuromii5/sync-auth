@@ -38,7 +38,7 @@ func NewAuthService() *AuthService {
 	db := postgres.NewDB(config.PGConfig)
 
 	// Init Redis storage
-	storage := redis.NewTokenStorage(config.TokensConfig.RedisAddr)
+	storage := redis.NewStorage(config.TokensConfig.RedisAddr)
 
 	// Init managers
 	tokenManager := tokens.NewTokenManager(logger, config.TokensConfig.Secret, config.TokensConfig.AccessTTL, config.TokensConfig.RefreshTTL, storage, storage, storage)

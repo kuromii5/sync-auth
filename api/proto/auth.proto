@@ -62,10 +62,7 @@ message ExchangeCodeRequest {
     string code = 2;  // Authorization code from GitHub
     string fingerprint = 3;
 }
-message AuthResponse {
-    string accessToken = 1;
-    string refreshToken = 2;
-}
+message AuthResponse {}
 
 message LogoutRequest {
     string accessToken = 1;

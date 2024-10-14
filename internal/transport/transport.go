@@ -60,15 +60,12 @@ func (a *api) SignUp(ctx context.Context, req *auth.SignUpRequest) (*auth.AuthRe
 	}
 
 	// automatically log in after register
-	tokens, err := a.auth.Login(ctx, req.GetEmail(), req.GetPassword(), req.GetFingerprint())
+	err = a.auth.Login(ctx, req.GetEmail(), req.GetPassword(), req.GetFingerprint())
 	if err != nil {
 		return nil, status.Error(codes.Internal, "internal login error")
 	}
 
-	return &auth.AuthResponse{
-		AccessToken:  tokens.AccessToken,
-		RefreshToken: tokens.RefreshToken,
-	}, nil
+	return &auth.AuthResponse{}, nil
 }
 
 func (a *api) Login(ctx context.Context, req *auth.LoginRequest) (*auth.AuthResponse, error) {
@@ -77,8 +74,7 @@ func (a *api) Login(ctx context.Context, req *auth.LoginRequest) (*auth.AuthResp
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	// get the pair of tokens: access and refresh
-	tokens, err := a.auth.Login(ctx, req.GetEmail(), req.GetPassword(), req.GetFingerprint())
+	err = a.auth.Login(ctx, req.GetEmail(), req.GetPassword(), req.GetFingerprint())
 	if err != nil {
 		if errors.Is(err, service.ErrInvalidCreds) {
 			return nil, status.Error(codes.InvalidArgument, "invalid credentials")
@@ -87,10 +83,7 @@ func (a *api) Login(ctx context.Context, req *auth.LoginRequest) (*auth.AuthResp
 		return nil, status.Error(codes.Internal, "internal login error")
 	}
 
-	return &auth.AuthResponse{
-		AccessToken:  tokens.AccessToken,
-		RefreshToken: tokens.RefreshToken,
-	}, nil
+	return &auth.AuthResponse{}, nil
 }
 
 func (a *api) Logout(ctx context.Context, req *auth.LogoutRequest) (*auth.LogoutResponse, error) {
@@ -126,15 +119,12 @@ func (a *api) ConfirmCode(ctx context.Context, req *auth.ConfirmCodeRequest) (*a
 }
 
 func (a *api) ExchangeCodeForToken(ctx context.Context, req *auth.ExchangeCodeRequest) (*auth.AuthResponse, error) {
-	tokens, err := a.auth.ExchangeCodeForToken(ctx, req.GetCode(), req.GetProvider(), req.GetFingerprint())
+	err := a.auth.ExchangeCodeForToken(ctx, req.GetCode(), req.GetProvider(), req.GetFingerprint())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	return &auth.AuthResponse{
-		AccessToken:  tokens.AccessToken,
-		RefreshToken: tokens.RefreshToken,
-	}, nil
+	return &auth.AuthResponse{}, nil
 }
 
 func (a *api) GetAccessToken(ctx context.Context, req *auth.GetATRequest) (*auth.GetATResponse, error) {

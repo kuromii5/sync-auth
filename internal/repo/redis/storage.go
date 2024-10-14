@@ -21,7 +21,7 @@ type Storage struct {
 	client *redis.Client
 }
 
-func NewTokenStorage(addr string) *Storage {
+func NewStorage(addr string) *Storage {
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     addr,
 		Password: "",
