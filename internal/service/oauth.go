@@ -39,7 +39,7 @@ func (a *Auth) ExchangeCodeForToken(ctx context.Context, code, provider, fingerp
 		return fmt.Errorf("%s:%w", f, err)
 	}
 
-	user, err := a.userProvider.User(ctx, email)
+	user, err := a.userProvider.UserByEmail(ctx, email)
 	switch {
 	case err == nil:
 	case errors.Is(err, postgres.ErrUserNotFound):

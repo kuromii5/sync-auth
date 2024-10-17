@@ -43,15 +43,13 @@ type EmailVerificationConfig struct {
 	AppSmtpHost string        `yaml:"app_smtp_host" env:"APP_SMTP_HOST" env-required:"true"`
 }
 
-func init() {
+func Load() Config {
+	var config Config
+
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
-}
-
-func Load() Config {
-	var config Config
 
 	if err := cleanenv.ReadEnv(&config); err != nil {
 		log.Fatal("couldn't bind settings to config")

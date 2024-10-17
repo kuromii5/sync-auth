@@ -7,9 +7,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgconn"
+	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/kuromii5/sync-auth/internal/config"
 	"github.com/kuromii5/sync-auth/internal/models"
 )
@@ -18,10 +18,6 @@ var (
 	ErrUserExists   = errors.New("user already exists")
 	ErrUserNotFound = errors.New("user not found")
 )
-
-type DB struct {
-	Pool *pgxpool.Pool
-}
 
 func PGConnectionStr(config config.PostgresConfig) string {
 	return fmt.Sprintf(
@@ -35,6 +31,15 @@ func PGConnectionStr(config config.PostgresConfig) string {
 	)
 }
 
+type PoolDB interface {
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
+}
+
+type DB struct {
+	Pool PoolDB
+}
+
 func NewDB(config config.PostgresConfig) *DB {
 	dbUrl := PGConnectionStr(config)
 
@@ -46,7 +51,7 @@ func NewDB(config config.PostgresConfig) *DB {
 		log.Fatal("unable to parse db url")
 	}
 
-	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
+	pool, err := pgxpool.ConnectConfig(ctx, poolConfig)
 	if err != nil {
 		log.Fatal("unable to connect to db")
 	}
@@ -73,14 +78,14 @@ func (d *DB) SaveUser(ctx context.Context, email string, passwordHash []byte) (i
 	return userID, nil
 }
 
-func (d *DB) User(ctx context.Context, email string) (models.User, error) {
-	const f = "postgres.User"
+func (d *DB) UserByEmail(ctx context.Context, email string) (models.User, error) {
+	const f = "postgres.UserByEmail"
 
-	query := "SELECT id, email, pass_hash, created_at, updated_at FROM users WHERE email = $1"
+	query := "SELECT id, email, pass_hash, created_at, updated_at, email_verified FROM users WHERE email = $1"
 
 	var user models.User
 	err := d.Pool.QueryRow(ctx, query, email).
-		Scan(&user.ID, &user.Email, &user.PasswordHash, &user.CreatedAt, &user.UpdatedAt)
+		Scan(&user.ID, &user.Email, &user.PasswordHash, &user.CreatedAt, &user.UpdatedAt, &user.EmailVerified)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.User{}, fmt.Errorf("%s:%w", f, ErrUserNotFound)
@@ -95,11 +100,11 @@ func (d *DB) User(ctx context.Context, email string) (models.User, error) {
 func (d *DB) UserByID(ctx context.Context, userID int32) (models.User, error) {
 	const f = "postgres.UserByID"
 
-	query := "SELECT id, email, pass_hash, created_at, updated_at FROM users WHERE id = $1"
+	query := "SELECT id, email, pass_hash, created_at, updated_at, email_verified FROM users WHERE id = $1"
 
 	var user models.User
 	err := d.Pool.QueryRow(ctx, query, userID).
-		Scan(&user.ID, &user.Email, &user.PasswordHash, &user.CreatedAt, &user.UpdatedAt)
+		Scan(&user.ID, &user.Email, &user.PasswordHash, &user.CreatedAt, &user.UpdatedAt, &user.EmailVerified)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.User{}, fmt.Errorf("%s:%w", f, ErrUserNotFound)
@@ -116,9 +121,14 @@ func (d *DB) VerifyUser(ctx context.Context, userID int32) error {
 
 	query := "UPDATE users SET email_verified = TRUE, updated_at = NOW() WHERE id = $1"
 
-	_, err := d.Pool.Exec(ctx, query, userID)
+	res, err := d.Pool.Exec(ctx, query, userID)
 	if err != nil {
 		return fmt.Errorf("%s:%w", f, err)
+	}
+
+	rowsAffected := res.RowsAffected()
+	if rowsAffected == 0 {
+		return fmt.Errorf("%s:%w", f, ErrUserNotFound)
 	}
 
 	return nil

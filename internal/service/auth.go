@@ -49,7 +49,7 @@ func (a *Auth) Login(ctx context.Context, email, password, fingerprint string) e
 	log := a.log.With(slog.String("func", f))
 	log.Info("trying to log in user")
 
-	user, err := a.userProvider.User(ctx, email)
+	user, err := a.userProvider.UserByEmail(ctx, email)
 	if err != nil {
 		if errors.Is(err, postgres.ErrUserNotFound) {
 			a.log.Warn("user not found", le.Err(err))

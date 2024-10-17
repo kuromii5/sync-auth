@@ -34,7 +34,7 @@ type UserSaver interface {
 	VerifyUser(ctx context.Context, userID int32) error
 }
 type UserProvider interface {
-	User(ctx context.Context, email string) (models.User, error)
+	UserByEmail(ctx context.Context, email string) (models.User, error)
 	UserByID(ctx context.Context, userID int32) (models.User, error)
 }
 
